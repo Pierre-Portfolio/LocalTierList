@@ -2,194 +2,144 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tier List Maker Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tier List Maker Mobile Pro</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #111827; color: white; padding: 20px; line-height: 1.6; }
-        h1 { text-align: center; margin-bottom: 20px; color: #f3f4f6; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; touch-action: none; }
+        body { background: #111827; color: white; padding: 15px; }
         
-        /* Header & Controls */
-        .main-controls { display: flex; justify-content: center; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; }
-        button { 
-            padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; 
-            font-weight: 600; transition: opacity 0.2s; background: #3b82f6; color: white;
-        }
-        button:hover { opacity: 0.9; }
-        button.edit-toggle { background: #6b7280; }
-        body.edit-mode button.edit-toggle { background: #10b981; }
+        h1 { text-align: center; margin-bottom: 15px; font-size: 1.5rem; color: #f3f4f6; }
+
+        .header-btns { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        button { padding: 12px 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         
-        .upload-zone { 
-            display: inline-block; padding: 10px 20px; background: #4b5563; 
-            border-radius: 6px; cursor: pointer; font-weight: 600; 
-        }
-        input[type="file"] { display: none; }
-
-        /* Tier List Structure */
-        #tier-container { display: flex; flex-direction: column; gap: 10px; margin-bottom: 40px; }
-        .tier { display: flex; min-height: 100px; border-radius: 8px; overflow: hidden; background: #1f2937; border: 2px solid transparent; }
-        body.edit-mode .tier { border-color: #4b5563; }
-
-        .label { 
-            width: 120px; display: flex; align-items: center; justify-content: center; 
-            font-size: 20px; font-weight: bold; text-align: center; padding: 10px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5); word-break: break-word;
-        }
+        .btn-edit { background: #4b5563; color: white; }
+        body.edit-mode .btn-edit { background: #10b981; }
         
-        .images { flex: 1; display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; min-height: 100px; }
-        img { width: 85px; height: 85px; object-fit: cover; cursor: grab; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-        img:active { cursor: grabbing; }
+        .btn-add { background: #3b82f6; color: white; display: none; }
+        body.edit-mode .btn-add { display: block; }
 
-        /* Edit Panel */
-        .edit-panel { 
-            display: none; width: 180px; background: #374151; padding: 10px; 
-            flex-direction: column; gap: 8px; border-left: 1px solid #4b5563;
-        }
+        .upload-label { background: #6b7280; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+
+        #tier-container { display: flex; flex-direction: column; gap: 10px; }
+        .tier { display: flex; min-height: 90px; border-radius: 10px; overflow: hidden; background: #1f2937; border: 2px solid transparent; }
+        body.edit-mode .tier { border-color: #374151; }
+
+        .label { width: 90px; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: bold; font-size: 18px; padding: 5px; overflow-wrap: anywhere; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+        .images { flex: 1; display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; min-height: 90px; }
+        
+        img { width: 75px; height: 75px; object-fit: cover; border-radius: 6px; cursor: grab; position: relative; z-index: 10; touch-action: none; }
+        
+        .edit-panel { display: none; width: 130px; background: #374151; padding: 8px; flex-direction: column; gap: 6px; border-left: 1px solid #4b5563; }
         body.edit-mode .edit-panel { display: flex; }
-        .edit-panel input[type="text"] { padding: 5px; border-radius: 4px; border: none; font-size: 14px; }
-        .edit-panel input[type="color"] { width: 100%; height: 30px; border: none; cursor: pointer; background: none; }
-        .btn-group { display: flex; gap: 5px; }
-        .btn-group button { flex: 1; padding: 5px; font-size: 12px; }
-        .btn-delete { background: #ef4444; }
+        .edit-panel input { width: 100%; padding: 6px; border-radius: 4px; border: none; font-size: 14px; }
 
-        /* Pool zone */
-        .pool-header { margin: 20px 0 10px; font-size: 1.2rem; color: #9ca3af; }
-        .pool { 
-            background: #1f2937; min-height: 150px; padding: 15px; border-radius: 10px; 
-            display: flex; flex-wrap: wrap; gap: 10px; border: 2px dashed #374151;
-        }
+        .pool-title { margin-top: 25px; color: #9ca3af; font-size: 1.1rem; margin-bottom: 10px; }
+        .pool { background: #1f2937; min-height: 150px; padding: 15px; border-radius: 12px; display: flex; flex-wrap: wrap; gap: 10px; border: 2px dashed #4b5563; margin-bottom: 50px; }
     </style>
 </head>
 <body class="">
 
-    <h1>Tier List Maker Pro</h1>
+    <h1>Tier List Maker</h1>
 
-    <div class="main-controls">
-        <label class="upload-zone">
-            📥 Importer des images
-            <input type="file" id="upload" multiple accept="image/*">
+    <div class="header-btns">
+        <label class="upload-label">
+            📥 Images <input type="file" id="upload" multiple accept="image/*" style="display:none;">
         </label>
-        <button class="edit-toggle" onclick="toggleEdit()">⚙️ Mode Édition : OFF</button>
-        <button onclick="addTier()">➕ Ajouter un rang</button>
+        <button class="btn-edit" onclick="document.body.classList.toggle('edit-mode')">⚙️ Mode Édition</button>
+        <button class="btn-add" onclick="addTier()">➕ Ajouter un rang</button>
     </div>
 
-    <div id="tier-container">
-        <!-- Généré par JS -->
-    </div>
-
-    <h2 class="pool-header">Réserve d'images</h2>
-    <div class="pool" id="pool" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+    <div id="tier-container"></div>
+    
+    <h3 class="pool-title">Réserve d'images</h3>
+    <div class="pool" id="pool"></div>
 
     <script>
-        const container = document.getElementById("tier-container");
-        const pool = document.getElementById("pool");
-        const upload = document.getElementById("upload");
-        let isEditMode = false;
-
-        function toggleEdit() {
-            isEditMode = !isEditMode;
-            document.body.classList.toggle("edit-mode", isEditMode);
-            const btn = document.querySelector(".edit-toggle");
-            btn.textContent = isEditMode ? "✔️ Mode Édition : ON" : "⚙️ Mode Édition : OFF";
-        }
+        let draggedImg = null;
 
         function createTier(name, color) {
-            const tierId = 'tier-' + Date.now() + Math.random();
-            const tier = document.createElement("div");
-            tier.className = "tier";
-            tier.id = tierId;
-            
-            tier.innerHTML = `
-                <div class="label" style="background-color: ${color}">${name}</div>
-                <div class="images" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+            const div = document.createElement("div");
+            div.className = "tier";
+            div.innerHTML = `
+                <div class="label" style="background:${color}">${name}</div>
+                <div class="images" ondragover="event.preventDefault()" ondrop="handleDrop(event)"></div>
                 <div class="edit-panel">
-                    <input type="text" value="${name}" oninput="updateLabel(this)">
-                    <input type="color" value="${color}" oninput="updateColor(this)">
-                    <div class="btn-group">
-                        <button onclick="moveTier(this, -1)">▲</button>
-                        <button onclick="moveTier(this, 1)">▼</button>
-                    </div>
-                    <button class="btn-delete" onclick="deleteTier(this)">Supprimer</button>
+                    <input type="text" value="${name}" oninput="this.closest('.tier').querySelector('.label').textContent=this.value">
+                    <input type="color" value="${color}" oninput="this.closest('.tier').querySelector('.label').style.background=this.value">
+                    <button onclick="deleteTier(this)" style="background:#ef4444; color:white; border-radius:4px; padding:5px; font-size:12px;">Supprimer</button>
                 </div>
             `;
-            container.appendChild(tier);
+            document.getElementById("tier-container").appendChild(div);
         }
 
-        function addTier() {
-            createTier("Nouveau", "#6b7280");
-        }
-
-        function updateLabel(input) {
-            input.parentElement.parentElement.querySelector(".label").textContent = input.value;
-        }
-
-        function updateColor(input) {
-            input.parentElement.parentElement.querySelector(".label").style.backgroundColor = input.value;
-        }
-
+        function addTier() { createTier("Nouveau", "#6b7280"); }
+        
         function deleteTier(btn) {
-            const tier = btn.closest(".tier");
-            const images = tier.querySelector(".images").children;
-            // Retourner les images dans le pool avant de supprimer
-            while(images.length > 0) {
-                pool.appendChild(images[0]);
+            const t = btn.closest(".tier");
+            const imgs = t.querySelectorAll("img");
+            imgs.forEach(i => document.getElementById("pool").appendChild(i));
+            t.remove();
+        }
+
+        // --- Drag & Drop PC ---
+        document.addEventListener("dragstart", e => { if(e.target.tagName === 'IMG') draggedImg = e.target; });
+        function handleDrop(e) {
+            e.preventDefault();
+            const target = e.target.closest(".images, .pool");
+            if(target && draggedImg) target.appendChild(draggedImg);
+        }
+
+        // --- Drag & Drop Mobile (Touch) ---
+        document.addEventListener("touchstart", e => {
+            if(e.target.tagName === 'IMG') {
+                draggedImg = e.target;
+                draggedImg.style.opacity = "0.6";
             }
-            tier.remove();
-        }
+        }, {passive: false});
 
-        function moveTier(btn, direction) {
-            const tier = btn.closest(".tier");
-            if (direction === -1 && tier.previousElementSibling) {
-                container.insertBefore(tier, tier.previousElementSibling);
-            } else if (direction === 1 && tier.nextElementSibling) {
-                container.insertBefore(tier.nextElementSibling, tier);
+        document.addEventListener("touchmove", e => {
+            if(!draggedImg) return;
+            e.preventDefault(); 
+            const touch = e.touches[0];
+            draggedImg.style.position = "fixed";
+            draggedImg.style.left = (touch.clientX - 37) + "px";
+            draggedImg.style.top = (touch.clientY - 37) + "px";
+        }, {passive: false});
+
+        document.addEventListener("touchend", e => {
+            if(!draggedImg) return;
+            draggedImg.style.opacity = "1";
+            draggedImg.style.position = "static";
+            
+            const touch = e.changedTouches[0];
+            const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest(".images, .pool");
+            
+            if(target) {
+                target.appendChild(draggedImg);
             }
-        }
-
-        // --- Drag & Drop ---
-        function allowDrop(ev) { ev.preventDefault(); }
-
-        function drag(ev) {
-            ev.dataTransfer.setData("text", ev.target.id);
-        }
-
-        function drop(ev) {
-            ev.preventDefault();
-            const data = ev.dataTransfer.getData("text");
-            const img = document.getElementById(data);
-            const target = ev.target.closest(".images, .pool");
-            if (target && img) {
-                target.appendChild(img);
-            }
-        }
+            draggedImg = null;
+        });
 
         // --- Upload ---
-        upload.addEventListener("change", (e) => {
-            Array.from(e.target.files).forEach(file => {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const img = document.createElement("img");
-                    img.src = event.target.result;
-                    img.id = "img-" + Math.random().toString(36).substr(2, 9);
-                    img.draggable = true;
-                    img.ondragstart = drag;
-                    pool.appendChild(img);
-                };
-                reader.readAsDataURL(file);
+        document.getElementById("upload").addEventListener("change", e => {
+            [...e.target.files].forEach(file => {
+                const img = document.createElement("img");
+                img.src = URL.createObjectURL(file);
+                img.id = "img-" + Math.random().toString(36).substr(2, 9);
+                img.draggable = true;
+                document.getElementById("pool").appendChild(img);
             });
         });
 
         // Initialisation par défaut
-        window.onload = () => {
-            const defaults = [
-                {n: "S", c: "#ff7f7f"},
-                {n: "A", c: "#ffbf7f"},
-                {n: "B", c: "#ffff7f"},
-                {n: "C", c: "#7fff7f"},
-                {n: "D", c: "#7fbfff"}
-            ];
-            defaults.forEach(d => createTier(d.n, d.c));
-        };
+        const start = [
+            {n:"S", c:"#ff7f7f"},
+            {n:"A", c:"#ffbf7f"},
+            {n:"B", c:"#ffff7f"},
+            {n:"C", c:"#7fff7f"}
+        ];
+        window.onload = () => start.forEach(d => createTier(d.n, d.c));
     </script>
 </body>
 </html>
