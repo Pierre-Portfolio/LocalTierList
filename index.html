@@ -13,7 +13,7 @@ input {display:none}
 .tier {display:flex;margin-bottom:10px;min-height:120px;border-radius:8px;overflow:hidden}
 .label {width:100px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold}
 .images {flex:1;background:#1f2937;display:flex;flex-wrap:wrap;gap:10px;padding:10px;min-height:120px}
-img {width:90px;height:90px;object-fit:cover;cursor:grab;border-radius:8px}
+img {width:90px;height:90px;object-fit:cover;cursor:grab;border-radius:8px;touch-action:none}
 .pool {margin-top:20px;padding:20px;background:#1f2937;min-height:120px;display:flex;flex-wrap:wrap;gap:10px;border-radius:10px}
 .s{background:#ef4444}.a{background:#f97316}.b{background:#eab308}.c{background:#22c55e}.d{background:#3b82f6}
 </style>
@@ -35,25 +35,48 @@ img {width:90px;height:90px;object-fit:cover;cursor:grab;border-radius:8px}
 <script>
 const upload=document.getElementById("upload");
 const pool=document.getElementById("pool");
+let dragged=null;
 
 upload.addEventListener("change",e=>{
 [...e.target.files].forEach(file=>{
-const img=document.createElement("img");
-img.src=URL.createObjectURL(file);
-img.draggable=true;
-img.id="img-"+Math.random();
-img.addEventListener("dragstart",drag);
+const img=createImage(URL.createObjectURL(file));
 pool.appendChild(img);
 });
 });
 
+function createImage(src){
+ const img=document.createElement("img");
+ img.src=src;
+ img.draggable=true;
+ img.id="img-"+Math.random();
+ img.addEventListener("dragstart",drag);
+ img.addEventListener("touchstart",touchStart,{passive:false});
+ img.addEventListener("touchmove",touchMove,{passive:false});
+ img.addEventListener("touchend",touchEnd);
+ return img;
+}
+
 function allowDrop(ev){ev.preventDefault();}
 function drag(ev){ev.dataTransfer.setData("text",ev.target.id);}
 function drop(ev){
-ev.preventDefault();
-const id=ev.dataTransfer.getData("text");
-const el=document.getElementById(id);
-ev.target.closest(".images, .pool").appendChild(el);
+ ev.preventDefault();
+ const id=ev.dataTransfer.getData("text");
+ const el=document.getElementById(id);
+ ev.target.closest(".images, .pool").appendChild(el);
+}
+
+function touchStart(e){
+ dragged=e.target;
+}
+function touchMove(e){
+ e.preventDefault();
+}
+function touchEnd(e){
+ const touch=e.changedTouches[0];
+ const target=document.elementFromPoint(touch.clientX,touch.clientY);
+ const zone=target?.closest(".images, .pool");
+ if(zone && dragged) zone.appendChild(dragged);
+ dragged=null;
 }
 </script>
 </body>
