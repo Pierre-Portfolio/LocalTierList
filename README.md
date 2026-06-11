@@ -13,7 +13,7 @@ Application web pour créer des tier lists depuis son téléphone ou son ordinat
 ## Fonctionnalités
 
 ### Tier list
-- 4 rangs par défaut (**S / A / B / C**) avec leurs couleurs classiques
+- 4 rangs par défaut (**S / A / B / C**) — dégradé du vert (S) au rouge (C)
 - Rangs entièrement personnalisables en mode édition : **renommer**, **changer la couleur** (sélecteur natif), **supprimer** (ses images retournent dans la réserve), **ajouter** autant de rangs que voulu
 - **Réserve d'images** en bas de page : les images uploadées y atterrissent avant d'être classées
 

@@ -53,7 +53,7 @@ STORAGE_KEY    = "tierlist-v1"
 IMG_SIZE       = 150   // taille de stockage des images (2x les 75px affichés, pour le retina)
 DRAG_THRESHOLD = 8     // px de mouvement avant qu'un pointerdown devienne un drag (sinon c'est un tap)
 SCROLL_MARGIN  = 80    // zone en haut/bas de l'écran qui déclenche l'auto-scroll pendant un drag
-DEFAULT_TIERS  = [S #ff7f7f, A #ffbf7f, B #ffff7f, C #7fff7f]
+DEFAULT_TIERS  = [S #7fff7f (vert), A #ffff7f (jaune), B #ffbf7f (orange), C #ff7f7f (rouge)]  // dégradé inversé : le meilleur rang est vert
 ```
 
 ### CSS structurant
