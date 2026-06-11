@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="./assets/images/github/header.gif" alt="Tier List Maker" />
+  <img src="./assets/images/github/header.png" alt="Tier List Maker" />
 </h1>
 <img src="./assets/images/github/star.gif" alt="star" />
 
@@ -45,7 +45,7 @@ Application web pour créer des tier lists depuis son téléphone ou son ordinat
 - **Alerte stockage plein** : si le quota du navigateur est atteint, l'app prévient une seule fois au lieu d'échouer en silence
 
 ### Sécurité
-- **Content-Security-Policy stricte** : `default-src 'none'` — la page ne peut contacter **aucun** serveur, les images sont limitées à `data:`/`blob:`
+- **Content-Security-Policy stricte** : `default-src 'none'` — la page ne peut contacter **aucun** serveur, les images sont limitées à `'self'` (favicon) / `data:` / `blob:`
 - **Aucun `innerHTML`** : tout le DOM est construit par `createElement` — aucune injection possible, même avec un `localStorage` forgé
 
 ## Technologies
@@ -71,7 +71,7 @@ LocalTierList/
   CLAUDE.md           → Documentation technique pour Claude
   README.md           → Ce fichier
   assets/
-    images/github/    → Images README
+    images/github/    → Images README + Icon.ico (favicon)
 ```
 
 ## Format de sauvegarde (localStorage, clé `tierlist-v1`)

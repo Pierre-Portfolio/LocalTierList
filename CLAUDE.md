@@ -35,14 +35,14 @@ L'utilisateur uploade des images (elles arrivent dans la "Réserve d'images" en 
 | Fichier | Rôle |
 |---|---|
 | `index.html` | **App complète** — HTML + CSS + JS vanilla (~360 lignes), aucune dépendance |
-| `assets/images/github/` | Images du README (header.gif, star.gif, UI.png) |
+| `assets/images/github/` | Images du README (header.png, star.gif, UI.png) + `Icon.ico` (favicon, référencé dans le `<head>`) |
 
 ---
 
 ## Stack (`index.html`)
 
 - **Vanilla JS strict** (`"use strict"`) — pas de framework, pas de build, pas de CDN, **aucune dépendance externe**
-- **⚠️ CSP** (`<meta http-equiv="Content-Security-Policy">` dans le `<head>`) : `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; base-uri 'none'; form-action 'none'` — **aucun appel réseau possible, par construction**. `'unsafe-inline'` est requis car tout le script/style est inline (monofichier). **Toute nouvelle ressource (script externe, fetch, image http) sera bloquée par le navigateur tant que la CSP n'est pas mise à jour.**
+- **⚠️ CSP** (`<meta http-equiv="Content-Security-Policy">` dans le `<head>`) : `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; base-uri 'none'; form-action 'none'` — **aucun appel réseau externe possible, par construction**. `'unsafe-inline'` est requis car tout le script/style est inline (monofichier) ; `'self'` dans `img-src` est requis par le **favicon** (`<link rel="icon">` → `assets/images/github/Icon.ico`). **Toute nouvelle ressource (script externe, fetch, image http) sera bloquée par le navigateur tant que la CSP n'est pas mise à jour.**
 - **⚠️ Aucun `innerHTML` nulle part** — tout le DOM est construit par `createElement` / `textContent`. **Ne jamais introduire de `innerHTML`** : c'est la garantie anti-XSS du projet (le `localStorage` est restauré sans échappement possible sinon).
 - **Pointer Events** pour le drag & drop unifié souris + tactile (pas de `mousedown`/`touchstart` séparés)
 - **localStorage** clé unique `tierlist-v1` — tout l'état dans un seul JSON
