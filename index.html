@@ -2,22 +2,29 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; base-uri 'none'; form-action 'none'">
     <title>Tier List Maker Mobile Pro</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; touch-action: none; }
-        body { background: #111827; color: white; padding: 15px; }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: #111827; color: white; padding: 15px; overscroll-behavior-y: contain; }
+
         h1 { text-align: center; margin-bottom: 15px; font-size: 1.5rem; color: #f3f4f6; }
 
-        .header-btns { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .header-btns { display: flex; justify-content: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
         button { padding: 12px 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        
+
         .btn-edit { background: #4b5563; color: white; }
         body.edit-mode .btn-edit { background: #10b981; }
-        
+
         .btn-add { background: #3b82f6; color: white; display: none; }
         body.edit-mode .btn-add { display: block; }
+
+        .btn-reset { background: #ef4444; color: white; display: none; }
+        body.edit-mode .btn-reset { display: block; }
+
+        .edit-hint { display: none; text-align: center; color: #fbbf24; font-size: 0.85rem; margin-bottom: 12px; }
+        body.edit-mode .edit-hint { display: block; }
 
         .upload-label { background: #6b7280; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; }
 
@@ -27,12 +34,17 @@
 
         .label { width: 90px; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: bold; font-size: 18px; padding: 5px; overflow-wrap: anywhere; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
         .images { flex: 1; display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; min-height: 90px; }
-        
-        img { width: 75px; height: 75px; object-fit: cover; border-radius: 6px; cursor: grab; position: relative; z-index: 10; touch-action: none; }
-        
+
+        /* touch-action: none uniquement sur les images : la page reste scrollable partout ailleurs */
+        img { width: 75px; height: 75px; object-fit: cover; border-radius: 6px; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+        img.dragging { position: fixed; z-index: 1000; opacity: 0.7; pointer-events: none; transform: scale(1.15); box-shadow: 0 6px 18px rgba(0,0,0,0.6); }
+
+        .drop-hover { outline: 2px solid #3b82f6; outline-offset: -4px; border-radius: 8px; }
+
         .edit-panel { display: none; width: 130px; background: #374151; padding: 8px; flex-direction: column; gap: 6px; border-left: 1px solid #4b5563; }
         body.edit-mode .edit-panel { display: flex; }
         .edit-panel input { width: 100%; padding: 6px; border-radius: 4px; border: none; font-size: 14px; }
+        .btn-del { background: #ef4444; color: white; border-radius: 4px; padding: 5px; font-size: 12px; }
 
         .pool-title { margin-top: 25px; color: #9ca3af; font-size: 1.1rem; margin-bottom: 10px; }
         .pool { background: #1f2937; min-height: 150px; padding: 15px; border-radius: 12px; display: flex; flex-wrap: wrap; gap: 10px; border: 2px dashed #4b5563; margin-bottom: 50px; }
@@ -46,100 +58,304 @@
         <label class="upload-label">
             📥 Images <input type="file" id="upload" multiple accept="image/*" style="display:none;">
         </label>
-        <button class="btn-edit" onclick="document.body.classList.toggle('edit-mode')">⚙️ Mode Édition</button>
-        <button class="btn-add" onclick="addTier()">➕ Ajouter un rang</button>
+        <button class="btn-edit" id="btn-edit">⚙️ Mode Édition</button>
+        <button class="btn-add" id="btn-add">➕ Ajouter un rang</button>
+        <button class="btn-reset" id="btn-reset">♻️ Réinitialiser</button>
     </div>
 
+    <p class="edit-hint">Mode édition : touchez une image pour la supprimer.</p>
+
     <div id="tier-container"></div>
-    
+
     <h3 class="pool-title">Réserve d'images</h3>
     <div class="pool" id="pool"></div>
 
     <script>
-        let draggedImg = null;
+        "use strict";
 
-        function createTier(name, color) {
-            const div = document.createElement("div");
-            div.className = "tier";
-            div.innerHTML = `
-                <div class="label" style="background:${color}">${name}</div>
-                <div class="images" ondragover="event.preventDefault()" ondrop="handleDrop(event)"></div>
-                <div class="edit-panel">
-                    <input type="text" value="${name}" oninput="this.closest('.tier').querySelector('.label').textContent=this.value">
-                    <input type="color" value="${color}" oninput="this.closest('.tier').querySelector('.label').style.background=this.value">
-                    <button onclick="deleteTier(this)" style="background:#ef4444; color:white; border-radius:4px; padding:5px; font-size:12px;">Supprimer</button>
-                </div>
-            `;
-            document.getElementById("tier-container").appendChild(div);
-        }
+        const STORAGE_KEY = "tierlist-v1";
+        const IMG_SIZE = 150;          // taille de stockage (2x la taille affichée, pour les écrans retina)
+        const DRAG_THRESHOLD = 8;      // px de mouvement avant de considérer un drag (sinon c'est un tap)
+        const SCROLL_MARGIN = 80;      // zone en haut/bas de l'écran qui déclenche l'auto-scroll pendant un drag
 
-        function addTier() { createTier("Nouveau", "#6b7280"); }
-        
-        function deleteTier(btn) {
-            const t = btn.closest(".tier");
-            const imgs = t.querySelectorAll("img");
-            imgs.forEach(i => document.getElementById("pool").appendChild(i));
-            t.remove();
-        }
-
-        // --- Drag & Drop PC ---
-        document.addEventListener("dragstart", e => { if(e.target.tagName === 'IMG') draggedImg = e.target; });
-        function handleDrop(e) {
-            e.preventDefault();
-            const target = e.target.closest(".images, .pool");
-            if(target && draggedImg) target.appendChild(draggedImg);
-        }
-
-        // --- Drag & Drop Mobile (Touch) ---
-        document.addEventListener("touchstart", e => {
-            if(e.target.tagName === 'IMG') {
-                draggedImg = e.target;
-                draggedImg.style.opacity = "0.6";
-            }
-        }, {passive: false});
-
-        document.addEventListener("touchmove", e => {
-            if(!draggedImg) return;
-            e.preventDefault(); 
-            const touch = e.touches[0];
-            draggedImg.style.position = "fixed";
-            draggedImg.style.left = (touch.clientX - 37) + "px";
-            draggedImg.style.top = (touch.clientY - 37) + "px";
-        }, {passive: false});
-
-        document.addEventListener("touchend", e => {
-            if(!draggedImg) return;
-            draggedImg.style.opacity = "1";
-            draggedImg.style.position = "static";
-            
-            const touch = e.changedTouches[0];
-            const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest(".images, .pool");
-            
-            if(target) {
-                target.appendChild(draggedImg);
-            }
-            draggedImg = null;
-        });
-
-        // --- Upload ---
-        document.getElementById("upload").addEventListener("change", e => {
-            [...e.target.files].forEach(file => {
-                const img = document.createElement("img");
-                img.src = URL.createObjectURL(file);
-                img.id = "img-" + Math.random().toString(36).substr(2, 9);
-                img.draggable = true;
-                document.getElementById("pool").appendChild(img);
-            });
-        });
-
-        // Initialisation par défaut
-        const start = [
-            {n:"S", c:"#ff7f7f"},
-            {n:"A", c:"#ffbf7f"},
-            {n:"B", c:"#ffff7f"},
-            {n:"C", c:"#7fff7f"}
+        const DEFAULT_TIERS = [
+            { n: "S", c: "#ff7f7f" },
+            { n: "A", c: "#ffbf7f" },
+            { n: "B", c: "#ffff7f" },
+            { n: "C", c: "#7fff7f" }
         ];
-        window.onload = () => start.forEach(d => createTier(d.n, d.c));
+
+        const container = document.getElementById("tier-container");
+        const pool = document.getElementById("pool");
+
+        // ---- Sauvegarde automatique (localStorage) ----
+        let saveTimer = null;
+        let storageFullWarned = false;
+
+        function serializeImgs(parent) {
+            return [...parent.querySelectorAll("img")].map(i => ({ s: i.src, a: i.alt }));
+        }
+
+        function save() {
+            const data = {
+                tiers: [...container.querySelectorAll(".tier")].map(t => ({
+                    n: t.querySelector(".label").textContent,
+                    c: t.dataset.color,
+                    imgs: serializeImgs(t)
+                })),
+                pool: serializeImgs(pool)
+            };
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                storageFullWarned = false;
+            } catch (err) {
+                if (!storageFullWarned) {
+                    storageFullWarned = true;
+                    alert("Stockage plein : la sauvegarde automatique a échoué. Supprimez des images pour libérer de l'espace.");
+                }
+            }
+        }
+
+        function saveSoon() {
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(save, 300);
+        }
+
+        function validImgEntry(d) {
+            return d && typeof d.s === "string" && d.s.startsWith("data:image/");
+        }
+
+        // ---- Construction du DOM (sans innerHTML : aucune injection possible) ----
+        function makeImg(src, alt) {
+            const img = document.createElement("img");
+            img.src = src;
+            img.alt = alt || "Image de la tier list";
+            img.draggable = false; // désactive le drag natif du navigateur, géré par Pointer Events
+            return img;
+        }
+
+        function createTier(name, color, imgs = []) {
+            const tier = document.createElement("div");
+            tier.className = "tier";
+            tier.dataset.color = color;
+
+            const label = document.createElement("div");
+            label.className = "label";
+            label.textContent = name;
+            label.style.background = color;
+
+            const images = document.createElement("div");
+            images.className = "images";
+            imgs.filter(validImgEntry).forEach(d => images.appendChild(makeImg(d.s, d.a)));
+
+            const panel = document.createElement("div");
+            panel.className = "edit-panel";
+
+            const nameInput = document.createElement("input");
+            nameInput.type = "text";
+            nameInput.value = name;
+            nameInput.addEventListener("input", () => {
+                label.textContent = nameInput.value;
+                saveSoon();
+            });
+
+            const colorInput = document.createElement("input");
+            colorInput.type = "color";
+            colorInput.value = color;
+            colorInput.addEventListener("input", () => {
+                label.style.background = colorInput.value;
+                tier.dataset.color = colorInput.value;
+                saveSoon();
+            });
+
+            const delBtn = document.createElement("button");
+            delBtn.className = "btn-del";
+            delBtn.textContent = "Supprimer";
+            delBtn.addEventListener("click", () => {
+                tier.querySelectorAll("img").forEach(i => pool.appendChild(i));
+                tier.remove();
+                save();
+            });
+
+            panel.append(nameInput, colorInput, delBtn);
+            tier.append(label, images, panel);
+            container.appendChild(tier);
+        }
+
+        // ---- Drag & drop unifié souris + tactile (Pointer Events) ----
+        let drag = null;     // { img, x, y, lastX, lastY, id, active }
+        let hovered = null;  // zone de drop survolée
+        let scrollRAF = null;
+
+        function dropTargetAt(x, y) {
+            const el = document.elementFromPoint(x, y);
+            if (!el) return null;
+            // tomber sur le label ou le panneau d'édition d'un tier compte aussi comme un drop dans ce tier
+            return el.closest(".images, .pool") || (el.closest(".tier")?.querySelector(".images") ?? null);
+        }
+
+        function updateHover(x, y) {
+            const t = dropTargetAt(x, y);
+            if (t === hovered) return;
+            if (hovered) hovered.classList.remove("drop-hover");
+            hovered = t;
+            if (hovered) hovered.classList.add("drop-hover");
+        }
+
+        function clearHover() {
+            if (hovered) hovered.classList.remove("drop-hover");
+            hovered = null;
+        }
+
+        function positionDragged(x, y) {
+            drag.img.style.left = (x - 37) + "px";
+            drag.img.style.top = (y - 37) + "px";
+        }
+
+        // Auto-scroll quand le doigt approche du bord de l'écran pendant un drag
+        // (indispensable sur mobile pour remonter de la réserve vers les tiers du haut)
+        function autoScrollStep() {
+            if (!drag || !drag.active) { scrollRAF = null; return; }
+            const y = drag.lastY;
+            let moved = false;
+            if (y < SCROLL_MARGIN) {
+                window.scrollBy(0, -Math.ceil((SCROLL_MARGIN - y) / 4));
+                moved = true;
+            } else if (y > innerHeight - SCROLL_MARGIN) {
+                window.scrollBy(0, Math.ceil((y - (innerHeight - SCROLL_MARGIN)) / 4));
+                moved = true;
+            }
+            if (moved) updateHover(drag.lastX, drag.lastY);
+            scrollRAF = requestAnimationFrame(autoScrollStep);
+        }
+
+        document.addEventListener("pointerdown", e => {
+            if (drag || !e.isPrimary) return;
+            if (e.target.tagName !== "IMG") return;
+            if (e.pointerType === "mouse" && e.button !== 0) return;
+            drag = { img: e.target, x: e.clientX, y: e.clientY, lastX: e.clientX, lastY: e.clientY, id: e.pointerId, active: false };
+            try { e.target.setPointerCapture(e.pointerId); } catch (err) { /* pointeur déjà relâché */ }
+        });
+
+        document.addEventListener("pointermove", e => {
+            if (!drag || e.pointerId !== drag.id) return;
+            drag.lastX = e.clientX;
+            drag.lastY = e.clientY;
+            if (!drag.active) {
+                // en dessous du seuil, c'est un tap : on ne déplace rien
+                if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < DRAG_THRESHOLD) return;
+                drag.active = true;
+                drag.img.classList.add("dragging");
+                scrollRAF = requestAnimationFrame(autoScrollStep);
+            }
+            positionDragged(e.clientX, e.clientY);
+            updateHover(e.clientX, e.clientY);
+        });
+
+        function endDrag(e) {
+            if (!drag || e.pointerId !== drag.id) return;
+            const d = drag;
+            drag = null; // toujours réinitialisé, même si le drag est annulé
+
+            if (d.active) {
+                if (scrollRAF) { cancelAnimationFrame(scrollRAF); scrollRAF = null; }
+                clearHover();
+                // cible calculée avant le nettoyage, pendant que l'image ignore encore le pointeur
+                const target = e.type === "pointerup" ? dropTargetAt(e.clientX, e.clientY) : null;
+                d.img.classList.remove("dragging");
+                d.img.style.left = "";
+                d.img.style.top = "";
+                if (target) target.appendChild(d.img);
+                save();
+            } else if (e.type === "pointerup" && document.body.classList.contains("edit-mode")) {
+                // tap (sans drag) en mode édition = suppression de l'image
+                if (confirm("Supprimer cette image ?")) {
+                    d.img.remove();
+                    save();
+                }
+            }
+        }
+
+        document.addEventListener("pointerup", endDrag);
+        document.addEventListener("pointercancel", endDrag);
+
+        // neutralise le drag natif HTML5 et le menu contextuel au long-press sur les images
+        document.addEventListener("dragstart", e => e.preventDefault());
+        document.addEventListener("contextmenu", e => {
+            if (e.target.tagName === "IMG") e.preventDefault();
+        });
+
+        // ---- Upload : redimensionnement + conversion en data URL (persistable, pas de fuite mémoire) ----
+        function fileToDataURL(file) {
+            return new Promise(resolve => {
+                const url = URL.createObjectURL(file);
+                const im = new Image();
+                im.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = IMG_SIZE;
+                    canvas.height = IMG_SIZE;
+                    const ctx = canvas.getContext("2d");
+                    // recadrage "cover" : même rendu que l'affichage en object-fit: cover
+                    const r = Math.max(IMG_SIZE / im.width, IMG_SIZE / im.height);
+                    const w = im.width * r;
+                    const h = im.height * r;
+                    ctx.drawImage(im, (IMG_SIZE - w) / 2, (IMG_SIZE - h) / 2, w, h);
+                    URL.revokeObjectURL(url);
+                    let data = canvas.toDataURL("image/webp", 0.8);
+                    if (!data.startsWith("data:image/webp")) data = canvas.toDataURL("image/jpeg", 0.85);
+                    resolve(data);
+                };
+                im.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    console.warn("Image illisible :", file.name);
+                    resolve(null);
+                };
+                im.src = url;
+            });
+        }
+
+        document.getElementById("upload").addEventListener("change", async e => {
+            for (const file of [...e.target.files]) {
+                const src = await fileToDataURL(file);
+                if (src) pool.appendChild(makeImg(src, file.name));
+            }
+            e.target.value = ""; // permet de ré-uploader le même fichier
+            save();
+        });
+
+        // ---- Boutons d'en-tête ----
+        document.getElementById("btn-edit").addEventListener("click", () => {
+            document.body.classList.toggle("edit-mode");
+        });
+
+        document.getElementById("btn-add").addEventListener("click", () => {
+            createTier("Nouveau", "#6b7280");
+            save();
+        });
+
+        document.getElementById("btn-reset").addEventListener("click", () => {
+            if (!confirm("Tout réinitialiser ? Les rangs et toutes les images seront supprimés.")) return;
+            localStorage.removeItem(STORAGE_KEY);
+            container.textContent = "";
+            pool.textContent = "";
+            DEFAULT_TIERS.forEach(d => createTier(d.n, d.c));
+        });
+
+        // ---- Initialisation : restaure la sauvegarde ou crée les tiers par défaut ----
+        (function init() {
+            let data = null;
+            try { data = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (err) { /* sauvegarde corrompue : on repart de zéro */ }
+            if (data && Array.isArray(data.tiers)) {
+                data.tiers.forEach(t => createTier(
+                    String(t.n ?? ""),
+                    /^#[0-9a-fA-F]{6}$/.test(t.c) ? t.c : "#6b7280",
+                    Array.isArray(t.imgs) ? t.imgs : []
+                ));
+                (Array.isArray(data.pool) ? data.pool : []).filter(validImgEntry).forEach(d => pool.appendChild(makeImg(d.s, d.a)));
+            } else {
+                DEFAULT_TIERS.forEach(d => createTier(d.n, d.c));
+            }
+        })();
     </script>
 </body>
 </html>
